@@ -21,6 +21,22 @@ function getRandomSeed() {
   return Math.floor(10000000 + Math.random() * 90000000).toString();
 }
 
+function useDebounce(value, delay) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 export default function BooksPage() {
   const [region, setRegion] = useState("en-US");
   const [seed, setSeed] = useState("");
@@ -32,9 +48,25 @@ export default function BooksPage() {
   const { ref, inView } = useInView();
   const [selectedBook, setSelectedBook] = useState(null);
   const [viewMode, setViewMode] = useState("table");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const [tempLikes, setTempLikes] = useState(likes);
+  const [tempReviews, setTempReviews] = useState(reviews);
+
+  const debouncedLikes = useDebounce(tempLikes, 500);
+  const debouncedReviews = useDebounce(tempReviews, 500);
+
+  useEffect(() => {
+    setLikes(debouncedLikes);
+  }, [debouncedLikes]);
+
+  useEffect(() => {
+    setReviews(debouncedReviews);
+  }, [debouncedReviews]);
 
   const fetchBooks = useCallback(
     async (pageNum, reset = false) => {
+      setIsLoading(true);
       try {
         const count = pageNum === 0 ? 20 : 10;
         const { data } = await axios.get("/api/books", {
@@ -42,8 +74,8 @@ export default function BooksPage() {
             region,
             seed,
             page: pageNum,
-            likes,
-            reviews,
+            likes: debouncedLikes,
+            reviews: debouncedReviews,
           },
         });
 
@@ -56,9 +88,11 @@ export default function BooksPage() {
       } catch (err) {
         console.error("Failed to load books", err);
         setHasMore(false);
+      } finally {
+        setIsLoading(false);
       }
     },
-    [region, seed, likes, reviews]
+    [region, seed, debouncedLikes, debouncedReviews]
   );
 
   useEffect(() => {
@@ -66,13 +100,13 @@ export default function BooksPage() {
     setBooks([]);
     setHasMore(true);
     fetchBooks(0, true);
-  }, [region, seed, likes, reviews, fetchBooks]);
+  }, [region, seed, debouncedLikes, debouncedReviews]);
 
   useEffect(() => {
-    if (inView && hasMore) {
+    if (inView && hasMore && !isLoading) {
       fetchBooks(page + 1);
     }
-  }, [inView, hasMore, page, fetchBooks]);
+  }, [inView, hasMore, page, isLoading]);
 
   const exportToCSV = () => {
     const data = books.map((book) => ({
@@ -111,12 +145,13 @@ export default function BooksPage() {
         setRegion={setRegion}
         seed={seed}
         setSeed={setSeed}
-        likes={likes}
-        setLikes={setLikes}
-        reviews={reviews}
-        setReviews={setReviews}
+        likes={tempLikes}
+        setLikes={setTempLikes}
+        reviews={tempReviews}
+        setReviews={setTempReviews}
         regions={REGIONS}
         getRandomSeed={getRandomSeed}
+        isLoading={isLoading}
       />
 
       <BookViewSwitcher viewMode={viewMode} setViewMode={setViewMode} />
@@ -129,7 +164,7 @@ export default function BooksPage() {
 
       {hasMore && (
         <div ref={ref} className="text-center mt-4 text-gray-500">
-          Loading more books...
+          {isLoading ? "Loading more books..." : "Scroll to load more"}
         </div>
       )}
 
