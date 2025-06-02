@@ -46,7 +46,7 @@ export default function BookFilters({
       </label>
 
       <label className="flex flex-col">
-        Avg Likes:
+        <span>Avg Likes: {likes.toFixed(1)}</span>
         <input
           type="range"
           min={0}
@@ -54,8 +54,8 @@ export default function BookFilters({
           step={0.1}
           value={likes}
           onChange={(e) => setLikes(parseFloat(e.target.value))}
+          className="h-full"
         />
-        <span>{likes.toFixed(1)}</span>
       </label>
 
       <label className="flex flex-col">
