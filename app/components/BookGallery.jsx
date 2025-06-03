@@ -24,7 +24,7 @@ export default function BookGallery({ books, onSelectBook }) {
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-6">
       {books.map((book) => (
         <div
-          key={book.index}
+          key={book.isbn}
           className="border rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow cursor-pointer bg-white"
           onClick={() => onSelectBook(book)}
         >

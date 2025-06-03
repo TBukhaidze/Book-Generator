@@ -14,11 +14,11 @@ export default function BookTable({ books, onSelectBook }) {
         <tbody>
           {books.map((book) => (
             <tr
-              key={book.index}
+              key={book.isbn}
               className="border-t hover:bg-gray-50 cursor-pointer"
               onClick={() => onSelectBook(book)}
             >
-              <td className="p-2">{book.index}</td>
+              <td className="p-2">{book.localIndex}</td>
               <td className="p-2">{book.isbn}</td>
               <td className="p-2">{book.title}</td>
               <td className="p-2">{book.author}</td>

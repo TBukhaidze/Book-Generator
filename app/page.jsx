@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
 import { useInView } from "react-intersection-observer";
 import Papa from "papaparse";
@@ -50,6 +50,9 @@ export default function BooksPage() {
   const [viewMode, setViewMode] = useState("table");
   const [isLoading, setIsLoading] = useState(false);
 
+  const existingIsbns = useRef(new Set());
+  const localIndexCounter = useRef(0);
+
   const [tempLikes, setTempLikes] = useState(likes);
   const [tempReviews, setTempReviews] = useState(reviews);
 
@@ -79,11 +82,39 @@ export default function BooksPage() {
           },
         });
 
+        if (reset) {
+          existingIsbns.current = new Set();
+          localIndexCounter.current = 0;
+        }
+
+        const uniqueBooks = data.filter((book) => {
+          if (existingIsbns.current.has(book.isbn)) {
+            return false;
+          }
+          existingIsbns.current.add(book.isbn);
+          return true;
+        });
+
+        const booksWithLocalIndex = uniqueBooks.map((book) => ({
+          ...book,
+          localIndex: ++localIndexCounter.current,
+        }));
+
         if (data.length === 0 || data.length < count) {
           setHasMore(false);
         }
 
-        setBooks((prev) => (reset ? data : [...prev, ...data]));
+        setBooks((prev) => {
+          if (reset) {
+            return booksWithLocalIndex;
+          } else {
+            const finalBooks = booksWithLocalIndex.filter(
+              (book) => !prev.some((b) => b.isbn === book.isbn)
+            );
+            return [...prev, ...finalBooks];
+          }
+        });
+
         setPage(pageNum);
       } catch (err) {
         console.error("Failed to load books", err);
@@ -100,17 +131,17 @@ export default function BooksPage() {
     setBooks([]);
     setHasMore(true);
     fetchBooks(0, true);
-  }, [region, seed, debouncedLikes, debouncedReviews]);
+  }, [region, seed, debouncedLikes, debouncedReviews, fetchBooks]);
 
   useEffect(() => {
     if (inView && hasMore && !isLoading) {
       fetchBooks(page + 1);
     }
-  }, [inView, hasMore, page, isLoading]);
+  }, [inView, hasMore, page, isLoading, fetchBooks]);
 
   const exportToCSV = () => {
     const data = books.map((book) => ({
-      Index: book.index,
+      LocalIndex: book.localIndex,
       ISBN: book.isbn,
       Title: book.title,
       Author: book.author,
